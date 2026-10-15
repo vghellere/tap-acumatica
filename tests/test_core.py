@@ -9,6 +9,7 @@ from tap_acumatica.tap import TapAcumatica
 SAMPLE_CONFIG = {
     "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
     # TODO: Initialize minimal tap config
+    "api_url": "http://acumatica.example",
     "client_id": "placeholder",
     "client_secret": "placeholder",
 }

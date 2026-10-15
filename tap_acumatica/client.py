@@ -10,7 +10,27 @@ from hotglue_singer_sdk.authenticators import APIAuthenticatorBase
 from hotglue_singer_sdk.streams import RESTStream
 from typing_extensions import override
 
-DEFAULT_API_URL = "http://54.174.197.202/AcumaticaSandbox/entity/Default/26.200.001"
+
+def instance_url(api_url: str) -> str:
+    """Return the Acumatica site root, ignoring a trailing slash."""
+    return api_url.rstrip("/")
+
+
+def _version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def fetch_default_endpoint_version(api_url: str) -> str:
+    """Return the newest ``Default`` contract version published at ``/entity``."""
+    root = instance_url(api_url)
+    response = requests.get(f"{root}/entity", timeout=300)
+    response.raise_for_status()
+    versions = [
+        endpoint["version"]
+        for endpoint in response.json()["endpoints"]
+        if endpoint["name"] == "Default"
+    ]
+    return max(versions, key=_version_key)
 
 
 def _unwrap_value(value: Any) -> Any:
@@ -35,8 +55,10 @@ class AcumaticaStream(RESTStream):
     @override
     @property
     def url_base(self) -> str:
-        """Return the API URL root, configurable via the ``api_url`` tap setting."""
-        return self.config.get("api_url", DEFAULT_API_URL)
+        """Return the Default entity URL for the configured Acumatica site."""
+        root = instance_url(self.config["api_url"])
+        version = self._tap.default_endpoint_version
+        return f"{root}/entity/Default/{version}"
 
     @override
     @cached_property

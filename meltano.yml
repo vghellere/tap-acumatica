@@ -41,16 +41,15 @@ plugins:
 
     - name: api_url
       label: API URL
-      description: Base URL for the Acumatica API
+      description: Acumatica site URL, such as http://host/AcumaticaSandbox
 
     # TODO: Declare required settings here:
     settings_group_validation:
-    - [client_id, client_secret]
+    - [api_url, client_id, client_secret]
 
     # TODO: Declare default configuration values here:
     config:
       start_date: 6 months ago
-      api_url: http://54.174.197.202/AcumaticaSandbox/entity/Default/26.200.001
 
   loaders:
   - name: target-jsonl

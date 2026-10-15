@@ -7,15 +7,15 @@ A [Singer](https://www.singer.io/) tap that extracts data from **Acumatica**. It
 - **REST**-style HTTP streams (see `client.py` / `streams.py`).
 - **OAuth2** with access token support via Hotglue (`access_token_support` on the tap).
 
-- Configurable **`api_url`** and optional **`start_date`** (see [Configuration](#configuration)).
+- Required **`api_url`** and optional **`start_date`** (see [Configuration](#configuration)).
 - Incremental sync uses the entity GUID **`id`** as the primary key and **`LastModifiedDateTime`** as the replication key.
 
 ### Streams
 
 | Stream | Endpoint / notes | Primary key | Replication key |
 | ------ | ---------------- | ----------- | ----------------- |
-| `accounts` | `GET` `{api_url}/Account` | `id` | `LastModifiedDateTime` |
-| `vendors` | `GET` `{api_url}/Vendor` | `id` | `LastModifiedDateTime` |
+| `accounts` | `GET` `{api_url}/entity/Default/{version}/Account` | `id` | `LastModifiedDateTime` |
+| `vendors` | `GET` `{api_url}/entity/Default/{version}/Vendor` | `id` | `LastModifiedDateTime` |
 
 Records are paged with `$top` and `$skip` (100 per page). Incremental syncs send `$filter=LastModifiedDateTime ge {bookmark}`. Field values are unwrapped from Acumatica's `{"value": ...}` objects before they are emitted. Vendor requests expand attributes, contacts and their addresses, the main, primary, remittance, and shipping contacts and their addresses, and payment instructions. Account has no linked records to expand.
 
@@ -53,7 +53,7 @@ tap-acumatica --help
 | Setting | Type | Required | Default | Description |
 | ------- | ---- | -------- | ------- | ----------- |
 | `start_date` | string (datetime) | no | `2000-01-01T00:00:00Z` | Earliest record date to sync. |
-| `api_url` | string | no | `http://54.174.197.202/AcumaticaSandbox/entity/Default/26.200.001` | Base URL for the API. |
+| `api_url` | string | yes | — | Acumatica site URL. A trailing slash is ignored. |
 | `client_id` | string | yes | — | OAuth client ID. |
 | `client_secret` | string | yes | — | OAuth client secret. |
 | `refresh_token` | string | no | — | OAuth refresh token (if applicable). |
@@ -65,7 +65,7 @@ Run `tap-acumatica --about` (or `tap-acumatica --about --format=markdown`) for t
 ```json
 {
   "start_date": "2000-01-01T00:00:00Z",
-  "api_url": "http://54.174.197.202/AcumaticaSandbox/entity/Default/26.200.001",
+  "api_url": "http://host/AcumaticaSandbox",
   "client_id": "YOUR_CLIENT_ID",
   "client_secret": "YOUR_CLIENT_SECRET",
   "refresh_token": ""
@@ -108,7 +108,7 @@ tap-acumatica --about
 
 ## API / documentation
 
-Entity requests use `api_url` (default `http://54.174.197.202/AcumaticaSandbox/entity/Default/26.200.001`). The OAuth token endpoint is `{instance}/identity/connect/token`, where `{instance}` is the site root before `/entity/`.
+`api_url` is the required Acumatica site root. The tap reads `{api_url}/entity` once and calls the latest `Default` contract version. The OAuth token endpoint is `{api_url}/identity/connect/token`.
 
 
 ## License
