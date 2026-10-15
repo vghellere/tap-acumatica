@@ -1,0 +1,85 @@
+"""Acumatica tap class."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from hotglue_singer_sdk import Stream, Tap
+from hotglue_singer_sdk import typing as th  # JSON schema typing helpers
+from hotglue_singer_sdk.authenticators import OAuthAuthenticator
+from typing_extensions import override
+
+from tap_acumatica.auth import AcumaticaAuthenticator
+from tap_acumatica.client import DEFAULT_API_URL
+from tap_acumatica.streams import (
+    AccountsStream,
+    VendorsStream,
+)
+
+STREAM_TYPES = [
+    AccountsStream,
+    VendorsStream,
+]
+
+
+class TapAcumatica(Tap):
+    """Singer tap for Acumatica."""
+
+    name = "tap-acumatica"
+
+    config_jsonschema = th.PropertiesList(
+        th.Property(
+            "start_date",
+            th.DateTimeType,
+            description="The earliest record date to sync",
+            default="2000-01-01T00:00:00Z",
+        ),
+        th.Property(
+            "api_url",
+            th.StringType,
+            description="Base URL for the Acumatica API",
+            default=DEFAULT_API_URL,
+        ),
+        th.Property(
+            "client_id",
+            th.StringType,
+            required=True,
+            description="OAuth client ID for the Acumatica OAuth app",
+        ),
+        th.Property(
+            "client_secret",
+            th.StringType,
+            required=True,
+            description="OAuth client secret for the Acumatica OAuth app",
+        ),
+        th.Property(
+            "refresh_token",
+            th.StringType,
+            description="OAuth refresh token for the Acumatica OAuth app",
+        ),
+    ).to_dict()
+
+    @override
+    def discover_streams(self) -> list[Stream]:
+        """Return a list of discovered streams."""
+        return [stream_class(tap=self) for stream_class in STREAM_TYPES]
+
+    @classmethod
+    def access_token_support(
+        cls,
+        connector: Any = None,
+    ) -> tuple[type[OAuthAuthenticator], str]:
+        """Return the authenticator class and OAuth token endpoint.
+
+        Returns:
+            A tuple with the authenticator class and the OAuth token endpoint URL.
+        """
+        api_url = DEFAULT_API_URL
+        if connector is not None and connector.config.get("api_url"):
+            api_url = connector.config["api_url"]
+        instance_url = api_url.split("/entity/", 1)[0].rstrip("/")
+        return AcumaticaAuthenticator, f"{instance_url}/identity/connect/token"
+
+
+if __name__ == "__main__":
+    TapAcumatica.cli()
