@@ -8,16 +8,17 @@ A [Singer](https://www.singer.io/) tap that extracts data from **Acumatica**. It
 - **OAuth2** with access token support via Hotglue (`access_token_support` on the tap).
 
 - Required **`api_url`** and optional **`start_date`** (see [Configuration](#configuration)).
-- Incremental sync uses the entity GUID **`id`** as the primary key and **`LastModifiedDateTime`** as the replication key.
+- Account and vendor syncs use the entity GUID **`id`** as the primary key and **`LastModifiedDateTime`** as the replication key.
 
 ### Streams
 
 | Stream | Endpoint / notes | Primary key | Replication key |
 | ------ | ---------------- | ----------- | ----------------- |
 | `accounts` | `GET` `{api_url}/entity/Default/{version}/Account` | `id` | `LastModifiedDateTime` |
+| `companies` | `PUT` `{api_url}/entity/Default/{version}/CompaniesStructure` | `id` | — |
 | `vendors` | `GET` `{api_url}/entity/Default/{version}/Vendor` | `id` | `LastModifiedDateTime` |
 
-Records are paged with `$top` and `$skip` (100 per page). Incremental syncs send `$filter=LastModifiedDateTime ge {bookmark}`. Field values are unwrapped from Acumatica's `{"value": ...}` objects before they are emitted. Vendor requests expand attributes, contacts and their addresses, the main, primary, remittance, and shipping contacts and their addresses, and payment instructions. Account has no linked records to expand.
+Account and vendor records are paged with `$top` and `$skip` (100 per page). Incremental syncs send `$filter=LastModifiedDateTime ge {bookmark}`. Field values are unwrapped from Acumatica's `{"value": ...}` objects before they are emitted. Vendor requests expand attributes, contacts and their addresses, the main, primary, remittance, and shipping contacts and their addresses, and payment instructions. Account has no linked records to expand. Companies come from the Company Branch inquiry: one `PUT` with `Results` expanded returns every branch, and the stream keeps one record per company `id` with the company fields only. That screen has no replication field.
 
 ## Requirements
 

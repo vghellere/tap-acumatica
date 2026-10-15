@@ -14,11 +14,13 @@ from tap_acumatica.auth import AcumaticaAuthenticator
 from tap_acumatica.client import fetch_default_endpoint_version, instance_url
 from tap_acumatica.streams import (
     AccountsStream,
+    CompaniesStream,
     VendorsStream,
 )
 
 STREAM_TYPES = [
     AccountsStream,
+    CompaniesStream,
     VendorsStream,
 ]
 

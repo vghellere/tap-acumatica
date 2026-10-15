@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import requests
 from hotglue_singer_sdk import typing as th  # JSON Schema typing helpers
+from typing_extensions import override
 
 from tap_acumatica.client import AcumaticaStream
 
@@ -126,8 +130,67 @@ _CUSTOMER_CONTACT = th.ObjectType(
     th.Property("Contact", _CONTACT),
     th.Property("ContactID", th.IntegerType),
     th.Property("custom", th.ObjectType()),
-    th.Property("_links", th.ObjectType(additional_properties=th.StringType)),
 )
+
+
+class CompaniesStream(AcumaticaStream):
+    """Stream for ``companies``."""
+
+    name = "companies"
+    path = "/CompaniesStructure"
+    rest_method = "PUT"
+    records_jsonpath = "$.Results[*]"
+    primary_keys = ["id"]
+    replication_key = None
+    expand = "Results"
+    schema = th.PropertiesList(
+        th.Property("id", th.StringType),
+        th.Property("BaseCurrencyID", th.StringType),
+        th.Property("CompanyID", th.StringType),
+        th.Property("CompanyName", th.StringType),
+        th.Property("CompanyStatus", th.BooleanType),
+        th.Property("CompanyType", th.StringType),
+    ).to_dict()
+
+    @override
+    def prepare_request_payload(
+        self,
+        context: dict | None,
+        next_page_token: Any | None,
+    ) -> dict:
+        """Send an empty inquiry body so Acumatica returns company branches."""
+        self._seen_ids: set[str] = set()
+        return {}
+
+    @override
+    def post_process(
+        self,
+        row: dict,
+        context: dict | None = None,
+    ) -> dict | None:
+        """Keep one record per company and drop branch fields."""
+        row = super().post_process(row, context)
+        record_id = row["id"]
+        if record_id in self._seen_ids:
+            return None
+        self._seen_ids.add(record_id)
+        return {
+            "id": row["id"],
+            "BaseCurrencyID": row["BaseCurrencyID"],
+            "CompanyID": row["CompanyID"],
+            "CompanyName": row["CompanyName"],
+            "CompanyStatus": row["CompanyStatus"],
+            "CompanyType": row["CompanyType"],
+        }
+
+    @override
+    def get_next_page_token(
+        self,
+        response: requests.Response,
+        previous_token: Any | None,
+    ) -> None:
+        """The inquiry returns every company branch in one response."""
+        return None
 
 
 class AccountsStream(AcumaticaStream):
@@ -239,3 +302,4 @@ class VendorsStream(AcumaticaStream):
         th.Property("Warehouse", th.StringType),
         th.Property("custom", th.ObjectType()),
     ).to_dict()
+
